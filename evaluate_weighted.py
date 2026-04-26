@@ -35,6 +35,7 @@ from decoding import apply_contrastive_decoding
 
 
 RESULTS_CSV = os.path.join(RESULTS_DIR, "results_weighted.csv")
+DETAIL_CSV = os.path.join(RESULTS_DIR, "detail_predictions.csv")
 NEUTRAL_CACHE_FILE = os.path.join(RESULTS_DIR, "neutral_cache_weighted.pkl")
 
 
@@ -171,27 +172,51 @@ def run_evaluation(df: pd.DataFrame, neutral_cache: list):
     For each discouraged ability:
       1. Compute discourage logits for all questions
       2. For each alpha, apply contrastive decoding → get predictions
-      3. Compute weighted scores for all 18 abilities
-      4. Save to CSV
+      3. Save per-question details (correct/incorrect + levels) to detail CSV
+      4. Compute weighted scores and save summary to results CSV
     """
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
-    # First compute neutral baseline scores (alpha=0 equivalent)
+    # Prepare ground truth list
+    gt_answers = []
+    for _, row in df.iterrows():
+        gt = str(row["groundtruth"]).strip()
+        gt_answers.append(gt[0].upper() if gt else "")
+
+    # First compute neutral baseline predictions
     print("\nComputing neutral baseline predictions...", flush=True)
     from model import get_tokenizer
     tokenizer = get_tokenizer()
 
     neutral_preds = []
-    for idx, (_, row) in enumerate(tqdm(df.iterrows(), total=len(df), desc="Neutral preds")):
-        gt = str(row["groundtruth"]).strip()
-        if not gt:
+    for idx in tqdm(range(len(df)), desc="Neutral preds"):
+        if not gt_answers[idx]:
             neutral_preds.append("")
             continue
-        # At alpha=0, logits_final = logits_neutral (penalized term cancels out)
         ln = neutral_cache[idx]
-        # ln shape: [1, vocab_size] — squeeze to [vocab_size] for argmax
         token_id = ln.squeeze(0).argmax(dim=-1).item()
         neutral_preds.append(tokenizer.decode([token_id]).strip().upper())
+
+    # Save neutral detail rows
+    neutral_details = []
+    for idx, row in df.iterrows():
+        correct = int(neutral_preds[idx] == gt_answers[idx])
+        detail = {
+            "discouraged_ability": "NEUTRAL",
+            "alpha": 0.0,
+            "question_idx": idx,
+            "prediction": neutral_preds[idx],
+            "groundtruth": gt_answers[idx],
+            "correct": correct,
+        }
+        for ability in ABILITIES:
+            detail[f"level_{ability}"] = int(row.get(ability, 0)) if pd.notna(row.get(ability, 0)) else 0
+        neutral_details.append(detail)
+
+    # Write neutral details (create file with header)
+    df_neutral_detail = pd.DataFrame(neutral_details)
+    df_neutral_detail.to_csv(DETAIL_CSV, index=False)
+    print(f"Neutral details saved to {DETAIL_CSV}", flush=True)
 
     neutral_scores = compute_weighted_scores(df, neutral_preds)
     print("\nNeutral baseline scores:", flush=True)
@@ -217,8 +242,10 @@ def run_evaluation(df: pd.DataFrame, neutral_cache: list):
             prompt = build_prompt(disc_prompt, row["question"])
             disc_logits.append(get_next_logits(prompt))
 
-        # Step 2: for each alpha, get predictions and compute scores
+        # Step 2: for each alpha, get predictions, save details, compute scores
         batch = []
+        detail_batch = []
+
         for alpha in ALPHAS:
             predictions = []
             for idx in range(len(df)):
@@ -227,14 +254,29 @@ def run_evaluation(df: pd.DataFrame, neutral_cache: list):
                 )
                 predictions.append(pred)
 
+            # Save per-question detail
+            for idx in range(len(df)):
+                correct = int(predictions[idx] == gt_answers[idx])
+                detail = {
+                    "discouraged_ability": disc_ability,
+                    "alpha": alpha,
+                    "question_idx": idx,
+                    "prediction": predictions[idx],
+                    "groundtruth": gt_answers[idx],
+                    "correct": correct,
+                }
+                for ability in ABILITIES:
+                    val = df.iloc[idx].get(ability, 0)
+                    detail[f"level_{ability}"] = int(val) if pd.notna(val) else 0
+                detail_batch.append(detail)
+
+            # Compute summary scores
             scores = compute_weighted_scores(df, predictions)
 
-            # Store one row per (discouraged_ability, alpha, test_ability)
             for test_ability in ABILITIES:
                 score = scores[test_ability]
                 baseline = neutral_scores[test_ability]
 
-                # Delta as percentage change from neutral baseline
                 if baseline > 0:
                     delta_pct = (score - baseline) / baseline * 100
                 else:
@@ -249,7 +291,14 @@ def run_evaluation(df: pd.DataFrame, neutral_cache: list):
                     "delta_pct": delta_pct,
                 })
 
+        # Append summary results
         append_results(batch)
-        print(f"  [SAVED] {disc_ability} → {RESULTS_CSV}", flush=True)
+
+        # Append detail results
+        df_detail = pd.DataFrame(detail_batch)
+        df_detail.to_csv(DETAIL_CSV, mode="a", header=False, index=False)
+
+        print(f"  [SAVED] {disc_ability} → {RESULTS_CSV} + {DETAIL_CSV}", flush=True)
 
     print(f"\nAll done. Results in {RESULTS_CSV}", flush=True)
+    print(f"Per-question details in {DETAIL_CSV}", flush=True)

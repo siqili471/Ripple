@@ -83,7 +83,7 @@ def generate_heatmaps(results_csv=None, label=None, out_dir=None):
         pivot = pivot.reindex(index=rows, columns=cols)
 
         sns.heatmap(
-            pivot, ax=ax, cmap="RdYlGn_r", norm=norm,
+            pivot, ax=ax, cmap="RdYlGn", norm=norm,
             annot=True, fmt=".0f", annot_kws={"size": 7},
             linewidths=0.5, linecolor="white",
             cbar_kws={"label": "Δ score (%)"},

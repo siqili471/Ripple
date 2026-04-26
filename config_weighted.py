@@ -15,13 +15,13 @@ MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
 # ── Experiment ───────────────────────────────────────────────────────────────
 ALPHAS = [-3.0, -2.0, -1.5, -1.0, 0.0, 0.5]
 TEMPERATURE = 0          # 0 = greedy decoding
-NUM_QUESTIONS = 200      # number of randomly sampled questions
-RANDOM_SEED = 42         # for reproducible question sampling
+NUM_QUESTIONS = 500      # number of randomly sampled questions
+RANDOM_SEED = 510         # for reproducible question sampling
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 ADELE_CSV       = "data/ADeLe_batterry_v1dot0.csv"
-RESULTS_DIR     = "results_weighted_7b"
-FIGURES_DIR     = "figures_weighted_7b"
+RESULTS_DIR     = "results_weighted_7b_random_prompt"
+FIGURES_DIR     = "figures_weighted_7b_random_prompt"
 
 # ── Abilities (canonical ADeLe order) ────────────────────────────────────────
 ABILITIES = [

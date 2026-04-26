@@ -11,20 +11,21 @@ Contrastive decoding formula:
 
 # ── Model ────────────────────────────────────────────────────────────────────
 MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
-# MODEL_NAME = "Qwen/Qwen2.5-14B-Instruct"
+# MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
+# MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
 # MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.2"
 
 # ── Experiment ───────────────────────────────────────────────────────────────
 # α < 0: discourage  |  α = 0: neutral baseline  |  α > 0: encourage
-ALPHAS = [-1.5, -1.0, 0.0, 0.5]
+ALPHAS = [-3.0, -2.0, -1.5, -1.0, 0.0, 0.5]
 TEMPERATURE = 0          # 0 = greedy decoding
 MAX_QUESTIONS = 100      # max questions loaded per ability CSV
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 ADELE_CSV       = "data/ADeLe_batterry_v1dot0.csv"
 QUESTIONS_DIR   = "data/classified_questions"
-RESULTS_DIR     = "results"
-FIGURES_DIR     = "figures"
+RESULTS_DIR     = "results_7b_v2"
+FIGURES_DIR     = "figures_7b_v2"
 
 # ── Abilities (canonical ADeLe order) ────────────────────────────────────────
 ABILITIES = [

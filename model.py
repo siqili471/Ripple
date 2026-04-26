@@ -3,7 +3,7 @@ model.py — Model loading and prompt building.
 """
 
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from config import MODEL_NAME, NEUTRAL_PROMPT
 
 
@@ -34,10 +34,11 @@ def load_model():
     _tokenizer.pad_token = _tokenizer.eos_token
 
     print(f"Loading model: {MODEL_NAME}", flush=True)
+    bnb_config = BitsAndBytesConfig(load_in_4bit=True)
     _model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
-        torch_dtype=torch.float16,
-        device_map="balanced",
+        quantization_config=bnb_config,
+        device_map="auto",
     ).eval()
     _model.config.pad_token_id = _tokenizer.eos_token_id
 
