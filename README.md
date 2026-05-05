@@ -2,6 +2,8 @@
 
 Investigates how suppressing one LLM ability via contrastive decoding affects performance across all 18 ADeLe abilities.
 
+## Google document: https://docs.google.com/document/d/1IAQ78PO1E8ZrBoQWZydSc-395vJta1UUwZeOidEVlmk/edit?usp=sharing
+
 ## Contrastive Decoding Formula
 
 ```
